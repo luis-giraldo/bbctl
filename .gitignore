@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Poetry
+.venv/
+poetry.lock
+
+# IDEs
+.idea/
+.vscode/
