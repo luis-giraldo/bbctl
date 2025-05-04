@@ -12,15 +12,15 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Constants
-BITBUCKET_API_BASE_URL = "https://api.bitbucket.org/2.0"
 
-
-def create_project(workspace: str, project_key: str, name: str, description: str, token: str) -> None:
+def create_project(
+    url: str, workspace: str, project_key: str, name: str, description: str, token: str
+) -> None:
     """
     Create a new project in a Bitbucket workspace.
 
     Args:
+        url (str): The base URL for the Bitbucket API.
         workspace (str): The Bitbucket workspace ID.
         project_key (str): The unique key for the project.
         name (str): The name of the project.
@@ -30,7 +30,8 @@ def create_project(workspace: str, project_key: str, name: str, description: str
     Returns:
         None
     """
-    url = f"{BITBUCKET_API_BASE_URL}/workspaces/{workspace}/projects/"
+    # Construct the full URL
+    full_url = f"{url}/workspaces/{workspace}/projects"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -45,8 +46,8 @@ def create_project(workspace: str, project_key: str, name: str, description: str
     logging.debug(f"Payload: {payload}")
 
     try:
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
+        response = requests.post(full_url, headers=headers, json=payload)
+        response.raise_for_status()
     except requests.exceptions.RequestException as e:
         if e.response is not None:
             logging.error(f"Response: {e.response.text}")
@@ -62,16 +63,27 @@ def create_project(workspace: str, project_key: str, name: str, description: str
 
 
 @click.command()
-@click.option("--workspace", required=True, help="The Bitbucket workspace ID.")
 @click.option("--project-key", required=True, help="The unique key for the project.")
 @click.option("--name", required=True, help="The name of the project.")
 @click.option("--description", default="", help="A description for the project.")
-@click.option("--token", required=True, help="The Bitbucket API token.")
-def main(workspace: str, project_key: str, name: str, description: str, token: str) -> None:
+def main(project_key: str, name: str, description: str) -> None:
     """
     CLI entry point to create a new project in a Bitbucket workspace.
     """
-    create_project(workspace, project_key, name, description, token)
+    # Read the workspace, token, and API URL from environment variables
+    workspace = os.getenv("BITBUCKET_WORKSPACE")
+    token = os.getenv("BITBUCKET_TOKEN")
+    url = os.getenv("BITBUCKET_API_URL")
+
+    if not workspace:
+        logging.error("❌ Missing BITBUCKET_WORKSPACE environment variable.")
+        raise SystemExit(1)
+
+    if not token:
+        logging.error("❌ Missing BITBUCKET_TOKEN environment variable.")
+        raise SystemExit(1)
+
+    create_project(url, workspace, project_key, name, description, token)
 
 
 if __name__ == "__main__":
