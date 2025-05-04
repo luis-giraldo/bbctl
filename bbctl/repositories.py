@@ -2,21 +2,19 @@ import os
 import requests
 import logging
 from dotenv import load_dotenv
+import click
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
-# Constants
-BITBUCKET_API_BASE_URL = "https://api.bitbucket.org/2.0"
 
 
 def create_repository(
-    workspace: str, repo_slug: str, project_key: str, is_private: bool, token: str
+    workspace: str, repo_slug: str, project_key: str, is_private: bool, token: str, base_url: str
 ) -> None:
     """
     Create a new repository in a Bitbucket workspace.
@@ -27,11 +25,12 @@ def create_repository(
         project_key (str): The project key where the repository will be created.
         is_private (bool): Whether the repository is private.
         token (str): The Bitbucket API token.
+        base_url (str): The base URL for the Bitbucket API.
 
     Returns:
         None
     """
-    url = f"{BITBUCKET_API_BASE_URL}/repositories/{workspace}/{repo_slug}"
+    url = f"{base_url}/repositories/{workspace}/{repo_slug}"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -60,22 +59,53 @@ def create_repository(
         raise SystemExit(1)  # Exit with a non-zero status code
 
 
-if __name__ == "__main__":
-    # Load values from environment variables
-    workspace = os.getenv("BITBUCKET_WORKSPACE", "mmvpyz2p77")
-    repo_slug = os.getenv("BITBUCKET_REPO_SLUG", "my-test-repo")
-    project_key = os.getenv("BITBUCKET_PROJECT_KEY", "MYPROJ")
-    is_private = os.getenv("BITBUCKET_IS_PRIVATE", "true").lower() == "true"
+@click.group()
+def cli():
+    """
+    CLI tool for managing Bitbucket repositories.
+    """
+    pass
+
+
+@cli.command()
+@click.option("--repo-slug", required=True, help="The repository slug (lowercase, no spaces).")
+@click.option("--project-key", required=True, help="The project key where the repository will be created.")
+@click.option(
+    "--is-private",
+    is_flag=True,
+    default=True,
+    help="Whether the repository is private (default: true).",
+)
+def create(repo_slug: str, project_key: str, is_private: bool) -> None:
+    """
+    Create a new repository in a Bitbucket workspace.
+    """
+    # Read workspace and token from environment variables
+    workspace = os.getenv("BITBUCKET_WORKSPACE")
     token = os.getenv("BITBUCKET_TOKEN")
 
+    if not workspace or not token:
+        logging.error("❌ Missing required environment variables: BITBUCKET_WORKSPACE or BITBUCKET_TOKEN")
+        raise SystemExit(1)
+
+    base_url = os.getenv("BITBUCKET_API_URL", "https://api.bitbucket.org/2.0")
+    create_repository(workspace, repo_slug, project_key, is_private, token, base_url)
+
+
+def main():
+    """
+    Main entry point for the CLI.
+    """
     # Validate required environment variables
-    if not token:
-        logging.error("Missing BITBUCKET_TOKEN environment variable.")
-        exit(1)
+    required_env_vars = ["BITBUCKET_API_URL"]
+    missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+    if missing_vars:
+        logging.error(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
+        raise SystemExit(1)
 
-    if not project_key:
-        logging.error("Missing BITBUCKET_PROJECT_KEY environment variable.")
-        exit(1)
+    # Run the CLI
+    cli()
 
-    # Call the function
-    create_repository(workspace, repo_slug, project_key, is_private, token)
+
+if __name__ == "__main__":
+    main()

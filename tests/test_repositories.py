@@ -2,20 +2,27 @@ import pytest
 from bbctl.repositories import create_repository
 
 
-def test_create_repository_success(requests_mock):
+@pytest.fixture
+def mock_env_vars(monkeypatch):
+    """Fixture to mock environment variables."""
+    monkeypatch.setenv("BITBUCKET_API_URL", "https://api.bitbucket.org/2.0")
+
+
+def test_create_repository_success(requests_mock, mock_env_vars):
     # Mock the Bitbucket API endpoint
     workspace = "test-workspace"
     repo_slug = "test-repo"
     project_key = "TEST"
     is_private = True
     token = "test-token"
-    url = f"https://api.bitbucket.org/2.0/repositories/{workspace}/{repo_slug}"
+    base_url = "https://api.bitbucket.org/2.0"
+    url = f"{base_url}/repositories/{workspace}/{repo_slug}"
 
     # Mock a successful response
     requests_mock.post(url, status_code=201, json={"name": repo_slug})
 
     # Call the function
-    create_repository(workspace, repo_slug, project_key, is_private, token)
+    create_repository(workspace, repo_slug, project_key, is_private, token, base_url)
 
     # Assert the mocked endpoint was called
     assert requests_mock.called
@@ -30,21 +37,22 @@ def test_create_repository_success(requests_mock):
     }
 
 
-def test_create_repository_failure(requests_mock):
+def test_create_repository_failure(requests_mock, mock_env_vars):
     # Mock the Bitbucket API endpoint
     workspace = "test-workspace"
     repo_slug = "test-repo"
     project_key = "TEST"
     is_private = True
     token = "test-token"
-    url = f"https://api.bitbucket.org/2.0/repositories/{workspace}/{repo_slug}"
+    base_url = "https://api.bitbucket.org/2.0"
+    url = f"{base_url}/repositories/{workspace}/{repo_slug}"
 
     # Mock a failure response
     requests_mock.post(url, status_code=400, json={"error": {"message": "Bad Request"}})
 
     # Call the function and capture logs
     with pytest.raises(SystemExit):  # Assuming the script exits on failure
-        create_repository(workspace, repo_slug, project_key, is_private, token)
+        create_repository(workspace, repo_slug, project_key, is_private, token, base_url)
 
     # Assert the mocked endpoint was called
     assert requests_mock.called
