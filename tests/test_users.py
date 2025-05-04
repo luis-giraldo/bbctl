@@ -3,9 +3,10 @@ from unittest.mock import patch, MagicMock
 from bbctl.users import add_user_to_repo, remove_user_from_repo
 
 
+@patch("bbctl.users.get_workspace")
 @patch("bbctl.users.get_auth")
 @patch("bbctl.users.requests.put")
-def test_add_user_to_repo(mock_put, mock_get_auth):
+def test_add_user_to_repo(mock_put, mock_get_auth, mock_get_workspace):
     """
     Test the add_user_to_repo function.
     """
@@ -22,8 +23,10 @@ def test_add_user_to_repo(mock_put, mock_get_auth):
     username = "test-user"
     permission = "read"
 
+    mock_get_workspace.return_value = workspace
+
     # Act
-    add_user_to_repo(workspace, repo_slug, username, permission)
+    add_user_to_repo(repo_slug, username, permission)
 
     # Assert
     mock_put.assert_called_once_with(
@@ -33,9 +36,10 @@ def test_add_user_to_repo(mock_put, mock_get_auth):
     )
 
 
+@patch("bbctl.users.get_workspace")
 @patch("bbctl.users.get_auth")
 @patch("bbctl.users.requests.delete")
-def test_remove_user_from_repo(mock_delete, mock_get_auth):
+def test_remove_user_from_repo(mock_delete, mock_get_auth, mock_get_workspace):
     """
     Test the remove_user_from_repo function.
     """
@@ -51,8 +55,10 @@ def test_remove_user_from_repo(mock_delete, mock_get_auth):
     repo_slug = "test-repo"
     username = "test-user"
 
+    mock_get_workspace.return_value = workspace
+
     # Act
-    remove_user_from_repo(workspace, repo_slug, username)
+    remove_user_from_repo(repo_slug, username)
 
     # Assert
     mock_delete.assert_called_once_with(
