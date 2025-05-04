@@ -13,3 +13,9 @@ poetry.lock
 # IDEs
 .idea/
 .vscode/
+
+# Environment Variables
+.env
+
+# Pytest
+.pytest_cache/
