@@ -62,7 +62,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -85,31 +85,32 @@ jobs:
         sha256sum bbctl > bbctl-linux-checksum.txt
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: bbctl-linux
         path: |
           dist/bbctl
           dist/bbctl-linux-checksum.txt
     
-    - name: Release
+    - name: Create Release
+      id: create_release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
       with:
+        tag_name: ${{ github.run_number }}
+        name: Build ${{ github.run_number }}
         files: |
           dist/bbctl
           dist/bbctl-linux-checksum.txt
-        name: bbctl ${{ github.ref_name }}
         body: |
-          # bbctl ${{ github.ref_name }}
+          # Build ${{ github.run_number }}
           
-          Linux binary for the Bitbucket command line tool.
+          Automated build from commit: ${{ github.sha }}
           
           ## Installation
           
           ```bash
           # Download the binary
-          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/bbctl
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ github.run_number }}/bbctl
           
           # Make it executable
           chmod +x bbctl
