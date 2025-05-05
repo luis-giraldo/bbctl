@@ -58,9 +58,6 @@ jobs:
       run: |
         poetry install
         
-        # Add PyInstaller through Poetry with specific Python version constraint
-        poetry add --group=dev "pyinstaller@^6.13.0; python_version >= '3.12' and python_version < '3.14'"
-    
     - name: Build with PyInstaller
       run: |
         # Use Poetry to run PyInstaller

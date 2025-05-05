@@ -6,10 +6,11 @@ authors = ["Luis Giraldo <giraldo.luisdavid@gmail.com.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<3.14"
 requests = "^2.32.3"
 click = "^8.1.8"
 python-dotenv = "^1.1.0"
+pyinstaller = "^6.13.0"
 
 
 [tool.poetry.group.dev.dependencies]
