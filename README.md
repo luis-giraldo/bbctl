@@ -8,15 +8,6 @@ A CLI tool for interacting with the Bitbucket API.
 - Manage users
 - Configure branch permissions
 
-## # bbctl
-
-A command-line interface tool for interacting with the Bitbucket API.
-
-## Features
-- Create and manage Bitbucket projects
-- Create and configure repositories
-- Add and remove user permissions
-- Configure branch permissions and exemptions
 
 ## Installation
 
