@@ -62,19 +62,23 @@ jobs:
     
     - name: Build with PyInstaller
       run: |
-        # Install all dependencies explicitly
-        pip install click requests python-dotenv
+        # Add PyInstaller to Poetry environment
+        poetry add --group=dev pyinstaller
         
-        # Use more comprehensive bundling options
-        pyinstaller --onefile --name bbctl \
+        # Use Poetry to run PyInstaller
+        poetry run pyinstaller --onefile --name bbctl \
           --hidden-import=click \
           --hidden-import=requests \
           --hidden-import=python-dotenv \
           --hidden-import=configparser \
+          --hidden-import=json \
+          --hidden-import=os \
           --collect-all click \
           --collect-all requests \
           --collect-all dotenv \
-          --add-data "$(python -c 'import click; print(click.__path__[0])')":click \
+          --collect-all json \
+          --add-data "$(poetry run python -c 'import click; print(click.__path__[0])')":click \
+          --add-data "$(poetry run python -c 'import dotenv; print(dotenv.__path__[0])')":dotenv \
           bbctl/main.py
         
         # Verify the binary includes dependencies
