@@ -41,22 +41,71 @@ def create_repository(
         "project": {"key": project_key},
     }
 
-    logging.info(
-        f"Creating repository '{repo_slug}' in workspace '{workspace}' under project '{project_key}'..."
-    )
+    message = f"Creating repository '{repo_slug}' in workspace '{workspace}' under project '{project_key}'..."
+    logging.info(message)
+    click.echo(message)
+    
     try:
         response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
+        response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        logging.error(f"❌ An error occurred while creating the repository: {e}")
+        error_message = f"❌ An error occurred while creating the repository: {e}"
+        logging.error(error_message)
+        click.echo(error_message, err=True)
         raise SystemExit(1)
 
     if response.status_code in (200, 201):
-        logging.info(f"✅ Repository '{repo_slug}' created successfully!")
+        success_message = f"✅ Repository '{repo_slug}' created successfully!"
+        logging.info(success_message)
+        click.echo(success_message)
     else:
-        logging.error(f"❌ Failed to create repository: {response.status_code}")
+        error_message = f"❌ Failed to create repository: {response.status_code}"
+        logging.error(error_message)
         logging.error(response.json().get("error", {}).get("message", "Unknown error"))
-        raise SystemExit(1)  # Exit with a non-zero status code
+        click.echo(error_message, err=True)
+        raise SystemExit(1)
+
+
+def repository_exists(workspace: str, repo_slug: str, token: str, base_url: str) -> bool:
+    """
+    Check if a repository with the given slug already exists in the workspace.
+
+    Args:
+        workspace (str): The Bitbucket workspace ID.
+        repo_slug (str): The repository slug.
+        token (str): The Bitbucket API token.
+        base_url (str): The base URL for the Bitbucket API.
+
+    Returns:
+        bool: True if the repository exists, False otherwise.
+    """
+    url = f"{base_url}/repositories/{workspace}/{repo_slug}"
+    headers = {"Authorization": f"Bearer {token}"}
+
+    logging.debug(f"Checking if repository '{repo_slug}' exists in workspace '{workspace}'...")
+
+    try:
+        response = requests.get(url, headers=headers)
+        # If we get a 200 response, the repository exists
+        if response.status_code == 200:
+            logging.info(f"Repository '{repo_slug}' already exists in workspace '{workspace}'")
+            return True
+        # If we get a 404 response, the repository does not exist
+        elif response.status_code == 404:
+            logging.debug(f"Repository '{repo_slug}' does not exist in workspace '{workspace}'")
+            return False
+        # Handle permission issues
+        elif response.status_code == 403:
+            logging.warning(f"Permission denied when checking if repository exists: {response.status_code}")
+            # We can't determine if it exists due to permissions
+            return False
+        # Handle other status codes
+        else:
+            logging.warning(f"Unexpected response when checking repository existence: {response.status_code}")
+            return False
+    except requests.exceptions.RequestException as e:
+        logging.warning(f"Error checking if repository exists: {e}")
+        return False
 
 
 @click.group()
@@ -67,7 +116,7 @@ def cli():
     pass
 
 
-@cli.command()
+@cli.command(name="create-repo")
 @click.option("--repo-slug", required=True, help="The repository slug (lowercase, no spaces).")
 @click.option("--project-key", required=True, help="The project key where the repository will be created.")
 @click.option(
@@ -89,6 +138,15 @@ def create(repo_slug: str, project_key: str, is_private: bool) -> None:
         raise SystemExit(1)
 
     base_url = os.getenv("BITBUCKET_API_URL", "https://api.bitbucket.org/2.0")
+    
+    # Check if repository already exists
+    if repository_exists(workspace, repo_slug, token, base_url):
+        message = f"❌ Repository '{repo_slug}' already exists in workspace '{workspace}'"
+        logging.error(message)
+        click.echo(message, err=True)
+        raise SystemExit(1)
+    
+    # If we get here, the repository doesn't exist, so create it
     create_repository(workspace, repo_slug, project_key, is_private, token, base_url)
 
 
