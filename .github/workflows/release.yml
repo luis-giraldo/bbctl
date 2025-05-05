@@ -57,14 +57,12 @@ jobs:
     - name: Install dependencies
       run: |
         poetry install
-        # Explicitly install compatible PyInstaller version
-        pip install pyinstaller
+        
+        # Add PyInstaller through Poetry with specific Python version constraint
+        poetry add --group=dev "pyinstaller@^6.13.0; python_version >= '3.12' and python_version < '3.14'"
     
     - name: Build with PyInstaller
       run: |
-        # Add PyInstaller to Poetry environment
-        poetry add --group=dev pyinstaller
-        
         # Use Poetry to run PyInstaller
         poetry run pyinstaller --onefile --name bbctl \
           --hidden-import=click \
