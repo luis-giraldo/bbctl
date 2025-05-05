@@ -57,11 +57,12 @@ jobs:
     - name: Install dependencies
       run: |
         poetry install
-        poetry add pyinstaller
+        # Explicitly install compatible PyInstaller version
+        pip install pyinstaller
     
     - name: Build with PyInstaller
       run: |
-        poetry run pyinstaller --onefile --name bbctl --hidden-import=click --hidden-import=requests --hidden-import=python-dotenv bbctl/main.py
+        pyinstaller --onefile --name bbctl --hidden-import=click --hidden-import=requests --hidden-import=python-dotenv bbctl/main.py
     
     - name: Generate SHA-256 checksum
       run: |
