@@ -1,141 +1,110 @@
 import pytest
-import os
 from bbctl.projects import create_project
 
 
-def mock_bitbucket_api(requests_mock, url, status_code, response_json):
-    """
-    Helper function to mock the Bitbucket API response.
-    """
-    requests_mock.post(url, status_code=status_code, json=response_json)
-
-
-def get_test_data():
-    """
-    Helper function to provide common test data.
-    """
+@pytest.fixture
+def project_data():
+    """Provides standard test data for projects"""
     return {
         "workspace": "test-workspace",
         "project_key": "TESTPROJ",
         "name": "Test Project",
         "description": "This is a test project.",
-        "url": "https://api.bitbucket.org/2.0",  # Base URL only
+        "url": "https://api.bitbucket.org/2.0",
         "token": "test-token",
     }
 
 
+@pytest.fixture
+def api_endpoint(project_data):
+    """Returns the full API endpoint URL for project creation"""
+    return f"{project_data['url']}/workspaces/{project_data['workspace']}/projects"
+
+
 @pytest.fixture(autouse=True)
 def mock_env_vars(monkeypatch):
-    """
-    Automatically mock environment variables for all tests.
-    """
+    """Mock environment variables for all tests"""
     monkeypatch.setenv("BITBUCKET_TOKEN", "test-token")
 
 
-def test_create_project_success(requests_mock):
-    """
-    Test that a project is created successfully when the API returns a 201 status code.
-    """
-    data = get_test_data()
-    full_url = f"{data['url']}/workspaces/{data['workspace']}/projects"
+@pytest.fixture
+def create_test_project(project_data):
+    """Helper to create a project using test data"""
 
-    # Mock a successful response
-    mock_bitbucket_api(
-        requests_mock,
-        full_url,
+    def _create():
+        return create_project(
+            project_data["url"],
+            project_data["workspace"],
+            project_data["project_key"],
+            project_data["name"],
+            project_data["description"],
+            project_data["token"],
+        )
+
+    return _create
+
+
+def test_successful_project_creation(
+    requests_mock, project_data, api_endpoint, create_test_project
+):
+    """When API returns 201, project should be created successfully"""
+    # Setup
+    requests_mock.post(
+        api_endpoint,
         status_code=201,
-        response_json={"key": data["project_key"], "name": data["name"]},
+        json={"key": project_data["project_key"], "name": project_data["name"]},
     )
 
-    # Call the function
-    create_project(
-        data["url"],
-        data["workspace"],
-        data["project_key"],
-        data["name"],
-        data["description"],
-        data["token"],
-    )
+    # Execute
+    create_test_project()
 
-    # Assert the mocked endpoint was called
-    assert requests_mock.called
+    # Verify
     assert requests_mock.call_count == 1
-
-    # Verify the payload sent in the request
     request = requests_mock.request_history[0]
     assert request.json() == {
-        "key": data["project_key"],
-        "name": data["name"],
-        "description": data["description"],
+        "key": project_data["project_key"],
+        "name": project_data["name"],
+        "description": project_data["description"],
     }
 
 
-def test_create_project_duplicate_key(requests_mock):
-    """
-    Test that the function handles a duplicate project key error gracefully.
-    """
-    data = get_test_data()
-    full_url = f"{data['url']}/workspaces/{data['workspace']}/projects"
-
-    # Mock a duplicate key error response
-    mock_bitbucket_api(
-        requests_mock,
-        full_url,
+def test_handles_duplicate_project_key(
+    requests_mock, api_endpoint, create_test_project
+):
+    """Should exit gracefully when project key already exists"""
+    # Setup
+    requests_mock.post(
+        api_endpoint,
         status_code=400,
-        response_json={
+        json={
             "type": "error",
             "error": {
                 "message": "Bad request",
-                "fields": {"__all__": ["Project with this Owner and Key already exists."]},
+                "fields": {
+                    "__all__": ["Project with this Owner and Key already exists."]
+                },
             },
         },
     )
 
-    # Call the function and expect a SystemExit
+    # Execute & Verify
     with pytest.raises(SystemExit):
-        create_project(
-            data["url"],
-            data["workspace"],
-            data["project_key"],
-            data["name"],
-            data["description"],
-            data["token"],
-        )
+        create_test_project()
 
-    # Assert the mocked endpoint was called
-    assert requests_mock.called
     assert requests_mock.call_count == 1
 
 
-def test_create_project_unauthorized(requests_mock):
-    """
-    Test that the function handles an unauthorized error (401) gracefully.
-    """
-    data = get_test_data()
-    full_url = f"{data['url']}/workspaces/{data['workspace']}/projects"
-
-    # Mock an unauthorized error response
-    mock_bitbucket_api(
-        requests_mock,
-        full_url,
+def test_handles_unauthorized_error(requests_mock, api_endpoint, create_test_project):
+    """Should exit gracefully when API returns 401 unauthorized"""
+    # Setup
+    requests_mock.post(
+        api_endpoint,
         status_code=401,
-        response_json={
-            "type": "error",
-            "error": {"message": "Token is invalid, expired, or not supported for this endpoint."},
-        },
+        json={"type": "error", "error": {"message": "Token is invalid or expired"}},
     )
 
-    # Call the function and expect a SystemExit
+    # Execute & Verify
     with pytest.raises(SystemExit):
-        create_project(
-            data["url"],
-            data["workspace"],
-            data["project_key"],
-            data["name"],
-            data["description"],
-            data["token"],
-        )
+        create_test_project()
 
-    # Assert the mocked endpoint was called
-    assert requests_mock.called
     assert requests_mock.call_count == 1
