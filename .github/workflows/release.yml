@@ -62,7 +62,23 @@ jobs:
     
     - name: Build with PyInstaller
       run: |
-        pyinstaller --onefile --name bbctl --hidden-import=click --hidden-import=requests --hidden-import=python-dotenv bbctl/main.py
+        # Install all dependencies explicitly
+        pip install click requests python-dotenv
+        
+        # Use more comprehensive bundling options
+        pyinstaller --onefile --name bbctl \
+          --hidden-import=click \
+          --hidden-import=requests \
+          --hidden-import=python-dotenv \
+          --hidden-import=configparser \
+          --collect-all click \
+          --collect-all requests \
+          --collect-all dotenv \
+          --add-data "$(python -c 'import click; print(click.__path__[0])')":click \
+          bbctl/main.py
+        
+        # Verify the binary includes dependencies
+        ldd dist/bbctl
     
     - name: Generate SHA-256 checksum
       run: |

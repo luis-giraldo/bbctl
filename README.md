@@ -23,6 +23,7 @@ A command-line interface tool for interacting with the Bitbucket API.
 ### Download the Binary
 ```bash
 # Download the latest binary
+# in order for this command to work our repo should be public, in the mean time refer to the releases page.
 curl -LO https://github.com/luis-giraldo/bbctl/releases/latest/download/bbctl
 
 
